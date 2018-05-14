@@ -19,13 +19,14 @@
 import tensorflow as tf
 import numpy as np
 import data
+import itertools
 
 FLAGS = tf.app.flags.FLAGS
 
 class Hypothesis(object):
   """Class to represent a hypothesis during beam search. Holds all the information needed for the hypothesis."""
 
-  def __init__(self, tokens, log_probs, state, attn_dists, p_gens, coverage):
+  def __init__(self, tokens, log_probs, state, attn_dists, p_gens, coverage, avg_p_gens=[], target_coef=0.4, n_0=0.5):
     """Hypothesis constructor.
 
     Args:
@@ -43,6 +44,10 @@ class Hypothesis(object):
     self.p_gens = p_gens
     self.coverage = coverage
 
+    self.avg_p_gens = avg_p_gens
+    self.target_coef = target_coef
+    self.n_t = len(tokens) * n_0
+
   def extend(self, token, log_prob, state, attn_dist, p_gen, coverage):
     """Return a NEW hypothesis, extended with the information from the latest step of beam search.
 
@@ -56,12 +61,14 @@ class Hypothesis(object):
     Returns:
       New Hypothesis for next step.
     """
+    new_p_gens = self.p_gens + [p_gen]
     return Hypothesis(tokens = self.tokens + [token],
                       log_probs = self.log_probs + [log_prob],
                       state = state,
                       attn_dists = self.attn_dists + [attn_dist],
-                      p_gens = self.p_gens + [p_gen],
-                      coverage = coverage)
+                      p_gens = new_p_gens,
+                      coverage = coverage,
+                      avg_p_gens = self.avg_p_gens + [self.avg_p_gen(itertools.chain.from_iterable(new_p_gens))])
 
   @property
   def latest_token(self):
@@ -70,12 +77,23 @@ class Hypothesis(object):
   @property
   def log_prob(self):
     # the log probability of the hypothesis so far is the sum of the log probabilities of the tokens so far
-    return sum(self.log_probs)
+    log_probs_ = np.array(self.log_probs[1:])
+    avg_p_gens_ = np.array(self.avg_p_gens)
+    m_target = self.target_coef * np.ones(len(self.log_probs)-1)
+    m_diff = m_target - avg_p_gens_
+    m_diff[m_diff < 0] = 0
+    copy_control = self.n_t * m_diff
+
+    return sum((log_probs_ - copy_control).tolist())
 
   @property
   def avg_log_prob(self):
     # normalize log probability by number of tokens (otherwise longer sequences always have lower probability)
     return self.log_prob / len(self.tokens)
+
+  def avg_p_gen(self, p_gens):
+    return sum(p_gens) / len(self.tokens)
+  
 
 
 def run_beam_search(sess, model, vocab, batch):
