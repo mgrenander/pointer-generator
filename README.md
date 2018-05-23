@@ -1,3 +1,8 @@
+This fork contains results from "Controlling Decoding for More Abstractive Summaries with Copy-Based Networks", by Weber et al. (2018). The only file that is changed from the original See code is the file ``beam_search.py``.
+
+The paper from Weber et al. can be found here: <https://arxiv.org/abs/1803.07038>
+
+** Original README from See: **
 This repository contains code for the ACL 2017 paper *[Get To The Point: Summarization with Pointer-Generator Networks](https://arxiv.org/abs/1704.04368)*. For an intuitive overview of the paper, read the [blog post](http://www.abigailsee.com/2017/04/16/taming-rnns-for-better-summarization.html).
 
 ## Looking for test set output?
