@@ -26,6 +26,7 @@ import pyrouge
 import util
 import logging
 import numpy as np
+from nltk import word_tokenize, ngrams
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -73,6 +74,14 @@ class BeamSearchDecoder(object):
       self._rouge_dec_dir = os.path.join(self._decode_dir, "decoded")
       if not os.path.exists(self._rouge_dec_dir): os.mkdir(self._rouge_dec_dir)
 
+  def novelty_score(self, article, reference, n):
+    """Returns the novelty of a given reference and article,
+    where the novelty is defined as the fraction of novel n-grams in the article with respect to the reference"""
+    # Word tokenize
+    art_grams = set(ngrams(word_tokenize(article), n))
+    ref_grams = set(ngrams(word_tokenize(reference), n))
+
+    return 1.0 - (len(art_grams.intersection(ref_grams)) / float(len(ref_grams)))
 
   def decode(self):
     """Decode examples until data is exhausted (if FLAGS.single_pass) and return, or decode indefinitely, loading latest checkpoint at regular intervals"""
@@ -92,11 +101,13 @@ class BeamSearchDecoder(object):
       original_abstract = batch.original_abstracts[0]  # string
       original_abstract_sents = batch.original_abstracts_sents[0]  # list of strings
 
+      target_score = self.novelty_score(original_article, original_abstract, 1)
+
       article_withunks = data.show_art_oovs(original_article, self._vocab) # string
       abstract_withunks = data.show_abs_oovs(original_abstract, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None)) # string
 
       # Run beam search to get best Hypothesis
-      best_hyp = beam_search.run_beam_search(self._sess, self._model, self._vocab, batch)
+      best_hyp = beam_search.run_beam_search(self._sess, self._model, self._vocab, batch, target_score)
 
       # Extract the output ids from the hypothesis and convert back to words
       output_ids = [int(t) for t in best_hyp.tokens[1:]]

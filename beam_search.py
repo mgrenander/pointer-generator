@@ -26,7 +26,7 @@ FLAGS = tf.app.flags.FLAGS
 class Hypothesis(object):
   """Class to represent a hypothesis during beam search. Holds all the information needed for the hypothesis."""
 
-  def __init__(self, tokens, log_probs, state, attn_dists, p_gens, coverage, avg_p_gens=[], target_coef=0.4, n_0=0.5):
+  def __init__(self, tokens, log_probs, state, attn_dists, p_gens, coverage, target_coef, avg_p_gens=[], n_0=0.5):
     """Hypothesis constructor.
 
     Args:
@@ -68,7 +68,8 @@ class Hypothesis(object):
                       attn_dists = self.attn_dists + [attn_dist],
                       p_gens = new_p_gens,
                       coverage = coverage,
-                      avg_p_gens = self.avg_p_gens + [self.avg_p_gen(itertools.chain.from_iterable(new_p_gens))])
+                      avg_p_gens = self.avg_p_gens + [self.avg_p_gen(itertools.chain.from_iterable(new_p_gens))],
+                      target_coef=self.target_coef)
 
   @property
   def latest_token(self):
@@ -96,7 +97,7 @@ class Hypothesis(object):
   
 
 
-def run_beam_search(sess, model, vocab, batch):
+def run_beam_search(sess, model, vocab, batch, target_score):
   """Performs beam search decoding on the given example.
 
   Args:
@@ -119,7 +120,8 @@ def run_beam_search(sess, model, vocab, batch):
                      state=dec_in_state,
                      attn_dists=[],
                      p_gens=[],
-                     coverage=np.zeros([batch.enc_batch.shape[1]]) # zero vector of length attention_length
+                     coverage=np.zeros([batch.enc_batch.shape[1]]), # zero vector of length attention_length
+                     target_coef=target_score
                      ) for _ in xrange(FLAGS.beam_size)]
   results = [] # this will contain finished hypotheses (those that have emitted the [STOP] token)
 
