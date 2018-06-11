@@ -101,7 +101,7 @@ class BeamSearchDecoder(object):
       original_abstract = batch.original_abstracts[0]  # string
       original_abstract_sents = batch.original_abstracts_sents[0]  # list of strings
 
-      target_score = self.novelty_score(original_article, original_abstract, 1)
+      target_score = self.novelty_score(original_article.decode('utf-8'), original_abstract.decode('utf-8'), 1)
 
       article_withunks = data.show_art_oovs(original_article, self._vocab) # string
       abstract_withunks = data.show_abs_oovs(original_abstract, self._vocab, (batch.art_oovs[0] if FLAGS.pointer_gen else None)) # string
@@ -253,12 +253,12 @@ def rouge_log(results_dict, dir_to_write):
 
 def get_decode_dir_name(ckpt_name):
   """Make a descriptive name for the decode dir, including the name of the checkpoint we use to decode. This is called in single_pass mode."""
-
-  if "train" in FLAGS.data_path: dataset = "train"
+  return "target-mod"
+  """if "train" in FLAGS.data_path: dataset = "train"
   elif "val" in FLAGS.data_path: dataset = "val"
   elif "test" in FLAGS.data_path: dataset = "test"
   else: raise ValueError("FLAGS.data_path %s should contain one of train, val or test" % (FLAGS.data_path))
   dirname = "decode_%s_%imaxenc_%ibeam_%imindec_%imaxdec" % (dataset, FLAGS.max_enc_steps, FLAGS.beam_size, FLAGS.min_dec_steps, FLAGS.max_dec_steps)
   if ckpt_name is not None:
     dirname += "_%s" % ckpt_name
-  return dirname
+  return dirname"""
